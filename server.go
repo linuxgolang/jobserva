@@ -60,10 +60,17 @@ func (server *Server)forwardData(conn *net.Conn, loginData []byte)  {
 }
 
 func (server *Server)todoSomething(conn *net.Conn,clientId string)  {
-	//读取客户端的数据,并做超时标记
-	go readSomething(conn,clientId)
 	//写数据,并做超时暂停,连接继续
-	writeSomething(conn,clientId)
+	go func() {
+		for{
+			if !writeSomething(conn,clientId){
+				return
+			}
+		}
+	}()
+
+	//读取客户端的数据,并做超时标记
+	readSomething(conn,clientId)
 }
 
 func (server *Server)checkLogin(conn *net.Conn) (bool,[]byte) {

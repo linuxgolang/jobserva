@@ -53,27 +53,32 @@ func readSomething(conn *net.Conn, clientId string)  {
 /**
  * 为客户端提供服务的函数
  */
-func writeSomething(conn *net.Conn,clientId string) {
-	time.Sleep(5*time.Second)//此处模拟需要大量计算的场景
-	if timeoutBroken[clientId] == 1 {
+func writeSomething(conn *net.Conn,clientId string) bool {
+	time.Sleep(1*time.Second)//此处模拟需要大量计算的场景
+	if _,ok := timeoutBroken[clientId];ok {
 		tick := time.NewTicker(time.Minute)
 		//读取超时了,暂停1分钟,重连就继续,没重连就退出了
 		for{
 			select {
 			case <-tick.C:
 				tick.Stop()
-				return
+				return false
 			default:
-				if timeoutBroken[clientId] == 0 {break}
+				if _,ok := timeoutBroken[clientId];ok {
+					fmt.Println("继续执行")
+					break
+				}
 			}
 		}
 	}
 
-	_, err := (*conn).Write([]byte("计算结果"))
+	_, err := (*conn).Write([]byte("这是服务a"))
 	if isErrAPrint(err) {
 		//连接出现问题,退出.
 		broken[clientId] = 1
+		return false
 	}
+	return true
 }
 
 func checkLoginData(data []byte)(bool,error){
@@ -105,7 +110,7 @@ func checkLoginData(data []byte)(bool,error){
 	return false,ErrLoginData
 }
 
-func cReadSomething(conn *net.Conn) []byte {
+func cReadSomething(conn *net.Conn,more bool) []byte {
 	buffer := make([]byte, 512)
 	for{
 		_, err := (*conn).Read(buffer)
@@ -116,6 +121,8 @@ func cReadSomething(conn *net.Conn) []byte {
 		chServerbChannel <- buffer
 		//这里处理服务器返回的服务数据
 		fmt.Println(buffer)
+
+		if !more {return nil}
 	}
 }
 

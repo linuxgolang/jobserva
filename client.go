@@ -23,7 +23,9 @@ func (client *Client)Run(loginData []byte)  {
 		for{
 			select {
 			case <-tick.C:
-				if timeoutBroken[clientId] != 1 && broken[clientId] != 1 {
+				_,ok1 := timeoutBroken[clientId]
+				_,ok2 := broken[clientId]
+				if !ok1 && !ok2 {
 					//客户端没有断开才登陆
 					if client.login(&conn,loginData) {
 						break
@@ -37,7 +39,9 @@ func (client *Client)Run(loginData []byte)  {
 
 	go func() {
 		for{
-			if broken[clientId] == 1{
+			_,ok1 := timeoutBroken[clientId]
+			_,ok2 := broken[clientId]
+			if ok1 || ok2{
 				//客户端已经断开,所以就不需要再连接serverb了
 				conn.Close()
 			}
@@ -48,19 +52,19 @@ func (client *Client)Run(loginData []byte)  {
 }
 
 func (client *Client)login(conn *net.Conn, loginData []byte) bool {
+	cWriteSomething(conn,loginData)
 	isLogin := true
 	defer func() {
 		if err:=recover();err!=nil{
 			isLogin = false
 		}
 	}()
-	cWriteSomething(conn,loginData)
-	if isLogin {cReadSomething(conn)}//如果这个函数没有panic,就说明登陆成功了,登陆失败服务器会关闭连接,报panic.
+	cReadSomething(conn, false)//如果这个函数没有panic,就说明登陆成功了,登陆失败服务器会关闭连接,报panic.
 	return isLogin
 }
 
 func (client *Client)todoSomething(conn *net.Conn, clientId string)  {
-	cReadSomething(conn)
+	cReadSomething(conn,true)
 	//for{
 	//	cWriteSomething(conn,[]byte("abc"))
 	//	time.Sleep(time.Second)
